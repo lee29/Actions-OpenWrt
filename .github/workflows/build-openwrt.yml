@@ -8,8 +8,8 @@
 
 name: Openwrt-AutoBuild
 
-on: 
-  # push: 
+on:
+  # push:
   #   branches:
   #     - master
   schedule:
@@ -19,7 +19,7 @@ on:
       ssh:
         description: 'SSH connection to Actions'
         required: false
-        default: 'false'
+        default: 'true'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
@@ -34,17 +34,17 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     name: Build ${{matrix.target}}
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64,phicomm-k2p,redmi-ac2100,nanopi-r2s]
-        
+        target: [hiwifi-hc5962]
+
     steps:
     - name: Checkout
       uses: actions/checkout@main
-  
+
     - name: Load Settings.ini
       run: |
         source "${GITHUB_WORKSPACE}/devices/${{matrix.target}}/settings.ini"
@@ -69,7 +69,7 @@ jobs:
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
-    
+
     - name: Get current date
       id: date
       run: |
@@ -85,13 +85,13 @@ jobs:
         (
           mv devices/common/feeds.conf openwrt/
         )
-        fi       
+        fi
         if [ -f "devices/${{matrix.target}}/feeds.conf" ]; then
         (
           mv devices/${{matrix.target}}/feeds.conf openwrt/
         )
         fi
-      
+
     - name: Free up disk space
       if: env.FREE_UP_DISK == 'true'
       env:
@@ -117,7 +117,7 @@ jobs:
           chmod +x devices/common/$DIY_SH
           /bin/bash "devices/common/$DIY_SH"
         )
-        fi       
+        fi
         if [ -f "devices/${{matrix.target}}/$DIY_SH" ]; then
         (
           chmod +x devices/${{matrix.target}}/$DIY_SH
@@ -148,14 +148,14 @@ jobs:
         )
         fi
         make defconfig
-        
+
     - name: Default PPPOE Setting
       if: env.PPPOE_USERNAME && env.PPPOE_PASSWD
       run: |
         sed -i '$i uci set network.wan.username=${{ env.PPPOE_USERNAME }}' openwrt/package/*/*/default-settings/files/zzz-default-settings
         sed -i '$i uci set network.wan.password=${{ env.PPPOE_PASSWD }}' openwrt/package/*/*/default-settings/files/zzz-default-settings
         sed -i '$i uci commit network' openwrt/package/*/*/default-settings/files/zzz-default-settings
-              
+
     - name: SSH connection to Actions
       uses: garypang13/debugger-action@master
       if: github.event.inputs.ssh == 'true'
@@ -175,7 +175,7 @@ jobs:
         echo -e "$(($(nproc)+1)) thread compile"
         make -j$(($(nproc)+1)) || make -j1 V=s
         echo "::set-output name=status::success"
-      
+
     - name: Upload bin directory
       uses: actions/upload-artifact@main
       if: env.UPLOAD_BIN_DIR_FOR_ARTIFACT == 'true'
@@ -210,7 +210,7 @@ jobs:
         elif [ ${{matrix.target}} == "x86_64" ]; then
         echo "NOTICE=请分配不少于800M的存储容量" >> $GITHUB_ENV
         fi
- 
+
     - name: Upload firmware to cowtransfer
       if: env.UPLOAD_FIRMWARE_TO_COWTRANSFER == 'true'
       continue-on-error: true
@@ -220,7 +220,7 @@ jobs:
         cowurl=$(echo $cowurl | grep -o -E "https[^ ]*")
         echo "COWURL=$cowurl" >> $GITHUB_ENV
         echo "Download Link: ${{ env.EMOJI }} $cowurl ${{ env.EMOJI }} 🚀"
- 
+
     - name: Upload firmware to WeTransfer
       if: env.UPLOAD_FIRMWARE_TO_WETRANSFER == 'true'
       continue-on-error: true
@@ -273,7 +273,7 @@ jobs:
       with:
         name: ${{ env.date3 }} ${{matrix.target}}
         path: ${{ env.FIRMWARE }}
-        
+
     - name: WeChat notification
       if: env.SCKEY
       run: |
